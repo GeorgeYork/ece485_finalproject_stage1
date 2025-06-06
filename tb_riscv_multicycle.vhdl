@@ -9,7 +9,7 @@ end tb_riscv_multicycle;
 architecture Behavioral of tb_riscv_multicycle is
 
     -- Component declaration for the RISC-V processor
-    component riscv_multicycle
+    component riscv_multicycle is
         Port (
             clk     : in  STD_LOGIC;
             reset   : in  STD_LOGIC
