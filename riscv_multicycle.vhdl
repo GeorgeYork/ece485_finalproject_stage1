@@ -162,7 +162,7 @@ begin
     
     -- Moore Machine, outputs determined by State
     -- FETCH
-    --tmp_next_pc <= std_logic_vector(unsigned(pc) + 4) when state = FETCH else tmp_next_pc;
+
     -- MEMORY
     mem_write_chip <= '1' when (state = MEMORY and mem_write = '1') else '0';
     next_pc <= std_logic_vector(signed(pc) + signed(id_ex_imm)) when (state = MEMORY and branch = '1' and id_ex_reg1 /= id_ex_reg2) else
@@ -177,6 +177,8 @@ begin
                mem_wb_alu  when (state = WRITEBACK and reg_write = '1' and mem_read = '0') else
                wb_data;
     
+    
+    -------------------------- IF state hardware ---------------------------------------------
     -- Instruction memory
     pc_byte_not_word <= "00" & pc(31 downto 2);  -- divide by 4 by shifting left 2, since byte addressable, not word addressable
     instr_mem_inst: instr_mem
@@ -188,8 +190,8 @@ begin
 
     -- IF/ID pipeline register
     if_id_instr <= instr;
-    --if_id_pc    <= pc;
 
+    -------------------------- ID state hardware ---------------------------------------------
     -- Decode instruction fields
     rs1 <= if_id_instr(19 downto 15);
     rs2 <= if_id_instr(24 downto 20);
@@ -234,6 +236,8 @@ begin
     id_ex_reg2 <= reg2_data;
     id_ex_imm  <= imm;
 
+    -------------------------- EX state hardware ---------------------------------------------
+    
     -- ALU control unit
     alu_control_inst: alu_control
         port map (
@@ -258,6 +262,8 @@ begin
     ex_mem_alu  <= alu_result;
     ex_mem_reg2 <= id_ex_reg2;
 
+    -------------------------- MEM state hardware ---------------------------------------------
+    
     -- Data memory
     data_memory_byte_not_word <= "00" & ex_mem_alu(31 downto 2);  -- divide by 4 by shifting left 2, since byte addressable, not word addressable
     data_mem_inst: data_mem
@@ -269,15 +275,10 @@ begin
             mem_write => mem_write
         );
 
+    -------------------------- WB state hardware ---------------------------------------------
     -- MEM/WB pipeline register
     mem_wb_alu  <= ex_mem_alu;
     mem_wb_data <= mem_data;
 
-    -- Write back to register file
---    wb_data <= mem_wb_data when mem_read = '1' 
---               else x"10000000" when load_addr = '1'  -- hack for custom load_addr instruction
---               else mem_wb_alu;
-               
-    --wb_rd   <= id_ex_instr(11 downto 7); -- Destination register
     wb_rd   <= if_id_instr(11 downto 7); -- Destination register
 end Behavioral;
