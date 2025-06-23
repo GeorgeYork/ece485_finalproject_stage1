@@ -16,7 +16,7 @@ architecture Behavioral of riscv_multicycle is
     signal state : state_type := FETCH;
     
     -- Signals for multicycle stages
-    signal pc, pc_byte_not_word         : STD_LOGIC_VECTOR(31 downto 0);
+    signal pc, pc_byte_not_word, NPC, next_pc         : STD_LOGIC_VECTOR(31 downto 0);
     signal instr      : STD_LOGIC_VECTOR(31 downto 0);
     signal alu_result : STD_LOGIC_VECTOR(31 downto 0);
     signal mem_data, data_memory_byte_not_word   : STD_LOGIC_VECTOR(31 downto 0);
@@ -26,7 +26,7 @@ architecture Behavioral of riscv_multicycle is
 
     -- Pipeline registers
     signal if_id_instr : STD_LOGIC_VECTOR(31 downto 0);
-    signal if_id_pc, next_pc    : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal if_id_pc    : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal id_ex_reg1  : STD_LOGIC_VECTOR(31 downto 0);
     signal id_ex_reg2  : STD_LOGIC_VECTOR(31 downto 0);
     signal id_ex_imm   : STD_LOGIC_VECTOR(31 downto 0);
@@ -171,24 +171,6 @@ begin
             end if;
         end process;   
     
-    -- Moore Machine, outputs determined by State
-    -- FETCH
-
-    -- MEMORY
-    mem_write_chip <= '1' when (state = MEMORY and mem_write = '1') else '0';
-    next_pc <= std_logic_vector(signed(pc) + signed(id_ex_imm)) when (state = MEMORY and branch = '1' and id_ex_reg1 /= id_ex_reg2) else
-               std_logic_vector(signed(pc) + signed(id_ex_imm)) when (state = MEMORY and jump = '1') else
-               std_logic_vector(unsigned(pc) + 4) when state = MEMORY else
-               next_pc;
-    -- WRITEBACK
-    reg_write_chip <= '1' when (state = WRITEBACK and reg_write = '1') else '0';
-    if_id_pc   <= next_pc when state = WRITEBACK else if_id_pc;
-    wb_data <= x"10000000" when (state = WRITEBACK and reg_write = '1' and load_addr = '1') else
-               mem_wb_data when (state = WRITEBACK and reg_write = '1' and mem_read = '1') else
-               mem_wb_alu  when (state = WRITEBACK and reg_write = '1' and mem_read = '0') else
-               wb_data;
-    
-    
     -------------------------- IF state hardware ---------------------------------------------
     -- Instruction memory
     pc_byte_not_word <= "00" & pc(31 downto 2);  -- divide by 4 by shifting left 2, since byte addressable, not word addressable
@@ -199,6 +181,8 @@ begin
             instr => instr
         );
 
+    NPC <= std_logic_vector(signed(pc) + 4);
+    
     -- IF/ID pipeline register
     if_id_instr <= instr;
 
@@ -286,10 +270,26 @@ begin
             mem_write => mem_write
         );
 
+    -- Moore Machine, outputs determined by State
+    -- MEMORY
+    mem_write_chip <= '1' when (state = MEMORY and mem_write = '1') else '0';
+    next_pc <= std_logic_vector(signed(NPC) + signed(id_ex_imm)) when (state = MEMORY and branch = '1' and id_ex_reg1 /= id_ex_reg2) else
+               std_logic_vector(signed(NPC) + signed(id_ex_imm)) when (state = MEMORY and jump = '1') else
+               NPC when state = MEMORY else
+               next_pc;
+
     -------------------------- WB state hardware ---------------------------------------------
     -- MEM/WB pipeline register
     mem_wb_alu  <= ex_mem_alu;
     mem_wb_data <= mem_data;
+
+    -- Moore Machine, outputs determined by State
+    reg_write_chip <= '1' when (state = WRITEBACK and reg_write = '1') else '0';
+    if_id_pc   <= next_pc when state = WRITEBACK else if_id_pc;
+    wb_data <= x"10000000" when (state = WRITEBACK and reg_write = '1' and load_addr = '1') else
+               mem_wb_data when (state = WRITEBACK and reg_write = '1' and mem_read = '1') else
+               mem_wb_alu  when (state = WRITEBACK and reg_write = '1' and mem_read = '0') else
+               wb_data;
 
     wb_rd   <= if_id_instr(11 downto 7); -- Destination register
 end Behavioral;
