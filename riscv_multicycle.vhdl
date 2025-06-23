@@ -42,6 +42,8 @@ architecture Behavioral of riscv_multicycle is
     signal alu_input_b  : STD_LOGIC_VECTOR(31 downto 0);
     signal wb_data      : STD_LOGIC_VECTOR(31 downto 0);
     signal wb_rd        : STD_LOGIC_VECTOR(4 downto 0);
+    signal clock_counter : integer := 1;
+     
 
     -- control signals
     signal mem_read   : STD_LOGIC;
@@ -129,6 +131,15 @@ architecture Behavioral of riscv_multicycle is
     end component;
 
 begin
+    -- clock counter process
+    process(clk, reset)
+    begin
+        if reset = '1' then
+            clock_counter <= 1;
+        elsif rising_edge(clk) then
+            clock_counter <= clock_counter + 1;
+        end if;
+    end process;
 
     -- PC logic
     pc_inst: pc_live
