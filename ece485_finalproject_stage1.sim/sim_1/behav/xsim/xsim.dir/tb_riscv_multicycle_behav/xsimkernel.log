@@ -1,7 +1,7 @@
-Running: xsim.dir/tb_riscv_multicycle_behav/xsimk.exe -simmode gui -wdb tb_riscv_multicycle_behav.wdb -simrunnum 0 -socket 63002
+Running: xsim.dir/tb_riscv_multicycle_behav/xsimk.exe -simmode gui -wdb tb_riscv_multicycle_behav.wdb -simrunnum 0 -socket 56663
 Design successfully loaded
 Design Loading Memory Usage: 6844 KB (Peak: 6844 KB)
-Design Loading CPU Usage: 15 ms
+Design Loading CPU Usage: 31 ms
 Simulation completed
-Simulation Memory Usage: 7544 KB (Peak: 7544 KB)
-Simulation CPU Usage: 15 ms
+Simulation Memory Usage: 7552 KB (Peak: 7552 KB)
+Simulation CPU Usage: 31 ms

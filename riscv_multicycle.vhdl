@@ -1,4 +1,19 @@
-
+---------------------------------------------------------------------------------------
+-- Final Project Stage 1: RISCV_Multicycle
+-- AUTHOR: 
+-- DESCRIPTION:
+--   Implementation of a 5 stage RISC-V multicycle architecture (IF-ID-EX-MEM-WB)
+--   that is NOT pipelined [all 5 stages of the first instruction completes before
+--   the next instruction is called.
+--   The only instructions implemented are:
+--          ADD, ADDI, SUBI, LW, SW, j, and BNE
+--          Also implemented is a custom instruction Load_Addr, similar to LA,
+--          but always loads the defaults address of 0x10000000
+--          All other decoded instructions are assumed to be a NOP,
+--          which sets all control signals to '0'
+--   The Data memory (LOOP label) begins at memory location 0x10000000
+--
+---------------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -14,37 +29,16 @@ architecture Behavioral of riscv_multicycle is
 
     type state_type is (FETCH, DECODE, EXECUTE, MEMORY, WRITEBACK);
     signal state : state_type := FETCH;
-    
-    -- Signals for multicycle stages
-    signal pc, pc_byte_not_word, NPC, next_pc         : STD_LOGIC_VECTOR(31 downto 0);
-    signal instr      : STD_LOGIC_VECTOR(31 downto 0);
-    signal alu_result : STD_LOGIC_VECTOR(31 downto 0);
+
+    -- Basic Registers
+    signal pc, pc_byte_not_word, NPC, next_pc           : STD_LOGIC_VECTOR(31 downto 0);
+    signal instr                                        : STD_LOGIC_VECTOR(31 downto 0);
+    signal opcode                                       : STD_LOGIC_VECTOR(6 downto 0);
+    signal reg1_data, reg2_data                         : STD_LOGIC_VECTOR(31 downto 0);
+    signal alu_input_a, alu_input_b, alu_result  : STD_LOGIC_VECTOR(31 downto 0);
+    signal wb_data                               : STD_LOGIC_VECTOR(31 downto 0);
     signal mem_data, data_memory_byte_not_word   : STD_LOGIC_VECTOR(31 downto 0);
-    signal reg_write, reg_write_chip  : STD_LOGIC;
-    signal alu_op     : STD_LOGIC_VECTOR(3 downto 0);
-    signal imm        : STD_LOGIC_VECTOR(31 downto 0);
-
-    -- Pipeline registers
-    signal if_id_instr : STD_LOGIC_VECTOR(31 downto 0);
-    signal if_id_pc    : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
-    signal id_ex_reg1  : STD_LOGIC_VECTOR(31 downto 0);
-    signal id_ex_reg2  : STD_LOGIC_VECTOR(31 downto 0);
-    signal id_ex_imm   : STD_LOGIC_VECTOR(31 downto 0);
-    signal ex_mem_alu  : STD_LOGIC_VECTOR(31 downto 0);
-    signal ex_mem_reg2 : STD_LOGIC_VECTOR(31 downto 0);
-    signal mem_wb_alu  : STD_LOGIC_VECTOR(31 downto 0);
-    signal mem_wb_data : STD_LOGIC_VECTOR(31 downto 0);
-
-    -- Additional signals
-    signal rs1, rs2, rd : STD_LOGIC_VECTOR(4 downto 0);
-    signal opcode       : STD_LOGIC_VECTOR(6 downto 0);
-    signal reg1_data, reg2_data : STD_LOGIC_VECTOR(31 downto 0);
-    signal alu_input_b  : STD_LOGIC_VECTOR(31 downto 0);
-    signal wb_data      : STD_LOGIC_VECTOR(31 downto 0);
-    signal wb_rd        : STD_LOGIC_VECTOR(4 downto 0);
     signal clock_counter : integer := 1;
-     
-
     -- control signals
     signal mem_read   : STD_LOGIC;
     signal mem_write, mem_write_chip  : STD_LOGIC;
@@ -52,6 +46,57 @@ architecture Behavioral of riscv_multicycle is
     signal branch     : STD_LOGIC;
     signal jump       : STD_LOGIC;
     signal load_addr  : STD_LOGIC;
+    signal reg_write, reg_write_chip  : STD_LOGIC;
+    signal rs1, rs2, rd : STD_LOGIC_VECTOR(4 downto 0);
+    signal wb_rd        : STD_LOGIC_VECTOR(4 downto 0);
+    
+    -- Registers for pipeline stages
+    signal if_id_npc, id_ex_npc, ex_mem_npc, mem_wb_npc             : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal id_ex_alu_result, ex_mem_alu_result, mem_wb_alu_result   : STD_LOGIC_VECTOR(31 downto 0);
+    signal if_id_alu_op, id_ex_alu_op, ex_mem_alu_op, mem_wb_alu_op : STD_LOGIC_VECTOR(3 downto 0);
+    signal if_id_imm, id_ex_imm, ex_mem_imm, mem_wb_imm             : STD_LOGIC_VECTOR(31 downto 0);
+    signal if_id_instr, id_ex_instr, ex_mem_instr, mem_wb_instr     : STD_LOGIC_VECTOR(31 downto 0); 
+    signal if_id_reg1_data, id_ex_reg1_data, ex_mem_reg1_data, mem_wb_reg1_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal if_id_reg2_data, id_ex_reg2_data, ex_mem_reg2_data, mem_wb_reg2_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal if_id_rs1, id_ex_rs1, ex_mem_rs1, mem_wb_rs1 : STD_LOGIC_VECTOR(4 downto 0);
+    signal if_id_rs2, id_ex_rs2, ex_mem_rs2, mem_wb_rs2 : STD_LOGIC_VECTOR(4 downto 0);
+    signal if_id_rd, id_ex_rd, ex_mem_rd, mem_wb_rd     : STD_LOGIC_VECTOR(4 downto 0);
+
+    -- control signals for pipeline stages
+    signal if_id_reg_write, id_ex_reg_write, ex_mem_reg_write, mem_wb_reg_write  : STD_LOGIC;
+    signal if_id_alu_src, id_ex_alu_src, ex_mem_alu_src, mem_wb_alu_src          : STD_LOGIC;
+    signal if_id_mem_read, id_ex_mem_read, ex_mem_mem_read, mem_wb_mem_read      : STD_LOGIC;
+    signal if_id_mem_write, id_ex_mem_write, ex_mem_mem_write, mem_wb_mem_write  : STD_LOGIC;
+    signal if_id_branch, id_ex_branch, ex_mem_branch, mem_wb_branch              : STD_LOGIC;
+    signal if_id_jump, id_ex_jump, ex_mem_jump, mem_wb_jump                      : STD_LOGIC;
+    signal if_id_load_addr, id_ex_load_addr, ex_mem_load_addr, mem_wb_load_addr  : STD_LOGIC;
+    
+     -- Additional signals [used in later stages]
+    signal stall, start_stall, double_stall        : STD_LOGIC;
+    signal stall_counter : integer range 0 to 3 := 0;
+    signal mux_select_A  : STD_LOGIC_VECTOR(1 downto 0) := (others => '0');
+    signal mux_select_B  : STD_LOGIC_VECTOR(1 downto 0) := (others => '0');
+ 
+    -- OLDIES
+    -- Signals for multicycle stages
+
+    signal alu_op     : STD_LOGIC_VECTOR(3 downto 0);
+    signal imm        : STD_LOGIC_VECTOR(31 downto 0);
+
+    -- Pipeline registers
+    signal if_id_pc    : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    --signal id_ex_reg1  : STD_LOGIC_VECTOR(31 downto 0);
+    --signal id_ex_reg2  : STD_LOGIC_VECTOR(31 downto 0);
+    signal ex_mem_alu  : STD_LOGIC_VECTOR(31 downto 0);
+    --signal ex_mem_reg2 : STD_LOGIC_VECTOR(31 downto 0);
+    signal mem_wb_alu  : STD_LOGIC_VECTOR(31 downto 0);
+    signal mem_wb_data : STD_LOGIC_VECTOR(31 downto 0);
+
+    -- Additional signals
+
+     
+
+
     
     component pc_live 
     Port (
@@ -227,8 +272,8 @@ begin
         );
 
     -- ID/EX pipeline register
-    id_ex_reg1 <= reg1_data;
-    id_ex_reg2 <= reg2_data;
+    id_ex_reg1_data <= reg1_data;
+    id_ex_reg2_data <= reg2_data;
     id_ex_imm  <= imm;
 
     -------------------------- EX state hardware ---------------------------------------------
@@ -241,13 +286,14 @@ begin
             alu_op => alu_op
         );
 
+    alu_input_a <= reg1_data;
     -- mux to select alu input B
     alu_input_b <= id_ex_imm when alu_src = '1' else
-                   id_ex_reg2;
+                   id_ex_reg2_data;
     -- ALU
     alu_inst: alu
         port map (
-            a      => id_ex_reg1,
+            a      => alu_input_a,
             b      => alu_input_b,
             op     => alu_op,
             result => alu_result
@@ -255,7 +301,7 @@ begin
 
     -- EX/MEM pipeline register
     ex_mem_alu  <= alu_result;
-    ex_mem_reg2 <= id_ex_reg2;
+    ex_mem_reg2_data <= id_ex_reg2_data;
 
     -------------------------- MEM state hardware ---------------------------------------------
     
@@ -264,7 +310,7 @@ begin
     data_mem_inst: data_mem
         port map (
             addr      => data_memory_byte_not_word,
-            data_in   => ex_mem_reg2,
+            data_in   => ex_mem_reg2_data,
             data_out  => mem_data,
             mem_read  => mem_read,
             mem_write => mem_write
@@ -273,7 +319,7 @@ begin
     -- Moore Machine, outputs determined by State
     -- MEMORY
     mem_write_chip <= '1' when (state = MEMORY and mem_write = '1') else '0';
-    next_pc <= std_logic_vector(signed(NPC) + signed(id_ex_imm)) when (state = MEMORY and branch = '1' and id_ex_reg1 /= id_ex_reg2) else
+    next_pc <= std_logic_vector(signed(NPC) + signed(id_ex_imm)) when (state = MEMORY and branch = '1' and id_ex_reg1_data /= id_ex_reg2_data) else
                std_logic_vector(signed(NPC) + signed(id_ex_imm)) when (state = MEMORY and jump = '1') else
                NPC when state = MEMORY else
                next_pc;
