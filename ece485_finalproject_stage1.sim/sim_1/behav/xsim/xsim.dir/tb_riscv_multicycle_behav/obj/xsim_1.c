@@ -50,7 +50,7 @@ extern void execute_71(char*, char *);
 extern void execute_26(char*, char *);
 extern void execute_29(char*, char *);
 extern void execute_30(char*, char *);
-extern void execute_33(char*, char *);
+extern void execute_31(char*, char *);
 extern void execute_34(char*, char *);
 extern void execute_35(char*, char *);
 extern void execute_36(char*, char *);
@@ -73,7 +73,7 @@ extern void execute_66(char*, char *);
 extern void execute_67(char*, char *);
 extern void execute_68(char*, char *);
 extern void execute_28(char*, char *);
-extern void execute_32(char*, char *);
+extern void execute_33(char*, char *);
 extern void execute_40(char*, char *);
 extern void execute_41(char*, char *);
 extern void execute_42(char*, char *);
@@ -84,7 +84,7 @@ extern void execute_55(char*, char *);
 extern void execute_60(char*, char *);
 extern void transaction_0(char*, char*, unsigned, unsigned, unsigned);
 extern void vhdl_transfunc_eventcallback(char*, char*, unsigned, unsigned, unsigned, char *);
-funcp funcTab[40] = {(funcp)execute_69, (funcp)execute_70, (funcp)execute_71, (funcp)execute_26, (funcp)execute_29, (funcp)execute_30, (funcp)execute_33, (funcp)execute_34, (funcp)execute_35, (funcp)execute_36, (funcp)execute_37, (funcp)execute_38, (funcp)execute_47, (funcp)execute_48, (funcp)execute_49, (funcp)execute_52, (funcp)execute_53, (funcp)execute_56, (funcp)execute_57, (funcp)execute_58, (funcp)execute_61, (funcp)execute_62, (funcp)execute_63, (funcp)execute_64, (funcp)execute_65, (funcp)execute_66, (funcp)execute_67, (funcp)execute_68, (funcp)execute_28, (funcp)execute_32, (funcp)execute_40, (funcp)execute_41, (funcp)execute_42, (funcp)execute_44, (funcp)execute_46, (funcp)execute_51, (funcp)execute_55, (funcp)execute_60, (funcp)transaction_0, (funcp)vhdl_transfunc_eventcallback};
+funcp funcTab[40] = {(funcp)execute_69, (funcp)execute_70, (funcp)execute_71, (funcp)execute_26, (funcp)execute_29, (funcp)execute_30, (funcp)execute_31, (funcp)execute_34, (funcp)execute_35, (funcp)execute_36, (funcp)execute_37, (funcp)execute_38, (funcp)execute_47, (funcp)execute_48, (funcp)execute_49, (funcp)execute_52, (funcp)execute_53, (funcp)execute_56, (funcp)execute_57, (funcp)execute_58, (funcp)execute_61, (funcp)execute_62, (funcp)execute_63, (funcp)execute_64, (funcp)execute_65, (funcp)execute_66, (funcp)execute_67, (funcp)execute_68, (funcp)execute_28, (funcp)execute_33, (funcp)execute_40, (funcp)execute_41, (funcp)execute_42, (funcp)execute_44, (funcp)execute_46, (funcp)execute_51, (funcp)execute_55, (funcp)execute_60, (funcp)transaction_0, (funcp)vhdl_transfunc_eventcallback};
 const int NumRelocateId= 40;
 
 void relocate(char *dp)

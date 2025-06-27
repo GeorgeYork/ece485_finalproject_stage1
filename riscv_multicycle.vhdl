@@ -195,6 +195,8 @@ begin
             pc_out => pc
         );
 
+    NPC <= std_logic_vector(signed(pc) + 4);
+
     -- state machine to walk through 5 cyles per instruction (not pipelined)
     -- Remove this when adding the pipeline registers and pipelining
     process(clk, reset)
@@ -216,6 +218,7 @@ begin
             end if;
         end process;   
     
+	
     -------------------------- IF state hardware ---------------------------------------------
     -- Instruction memory
     pc_byte_not_word <= "00" & pc(31 downto 2);  -- divide by 4 by shifting left 2, since byte addressable, not word addressable
@@ -225,11 +228,10 @@ begin
             addr  => pc_byte_not_word,
             instr => instr
         );
-
-    NPC <= std_logic_vector(signed(pc) + 4);
     
     -- IF/ID pipeline register
     if_id_instr <= instr;
+
 
     -------------------------- ID state hardware ---------------------------------------------
     -- Decode instruction fields
