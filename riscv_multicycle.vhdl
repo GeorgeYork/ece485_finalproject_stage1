@@ -315,7 +315,7 @@ begin
             data_in   => ex_mem_reg2_data,
             data_out  => mem_data,
             mem_read  => mem_read,
-            mem_write => mem_write
+            mem_write => mem_write_chip
         );
 
     -- Moore Machine, outputs determined by State
